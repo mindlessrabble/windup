@@ -4,10 +4,6 @@ import java.io.File;
 import java.util.Arrays;
 import java.util.List;
 
-import javax.inject.Inject;
-
-import javassist.bytecode.Descriptor.Iterator;
-
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -31,6 +27,7 @@ import org.jboss.forge.furnace.manager.impl.AddonManagerImpl;
 import org.jboss.forge.furnace.manager.maven.addon.MavenAddonDependencyResolver;
 import org.jboss.forge.furnace.manager.request.InstallRequest;
 import org.jboss.forge.furnace.manager.spi.AddonDependencyResolver;
+import org.jboss.forge.furnace.proxy.Proxies;
 import org.jboss.forge.furnace.repositories.AddonRepositoryMode;
 import org.jboss.forge.furnace.se.FurnaceFactory;
 import org.jboss.forge.furnace.util.Addons;
@@ -42,14 +39,11 @@ import org.jboss.windup.metadata.decoration.hint.Hint;
 import org.jboss.windup.metadata.type.FileMetadata;
 import org.jboss.windup.metadata.type.archive.ArchiveMetadata;
 import org.jboss.windup.reporting.Reporter;
-import org.switchyard.config.model.composite.CompositeReferenceModel;
 import org.switchyard.tools.forge.plugin.SwitchYardFacet;
 
 public class SwitchyardForgeController implements Reporter
 {
-	@Inject
-	private FacetFactory facetFactory;
-
+	
 
    private static final Log LOG = LogFactory.getLog(SwitchyardForgeController.class);
    {
@@ -60,7 +54,7 @@ public class SwitchyardForgeController implements Reporter
    @SuppressWarnings("unchecked")
    public void process(ArchiveMetadata archive, File reportDirectory)
    {
-	   this.examineArchive(archive, 0);
+//	   this.examineArchive(archive, 0);
       File forgeOutput = new File(reportDirectory, "forge");
       try
       {
@@ -86,6 +80,7 @@ public class SwitchyardForgeController implements Reporter
 
 
             AddonRegistry registry = furnace.getAddonRegistry();
+            Addons.waitUntilStarted(registry.getAddon(AddonId.from("org.switchyard.forge:switchyard-forge-plugin", "1.0.0-SNAPSHOT")));
             Addons.waitUntilStarted(registry.getAddon(AddonId.from("org.jboss.forge.addon:projects", "2.0.0.Alpha8")));
 
             ResourceFactory resourceFactory = registry.getExportedInstance(ResourceFactory.class).get();
@@ -100,6 +95,7 @@ public class SwitchyardForgeController implements Reporter
             List<Class<? extends ProjectFacet>> facetsToInstall = Arrays.asList(JavaSourceFacet.class,
                      ResourceFacet.class);
             Project project = projectFactory.createProject(projectDir, facetsToInstall);
+
             if (project != null){
            
                LOG.info("Project created: " + project);
@@ -108,9 +104,15 @@ public class SwitchyardForgeController implements Reporter
                MetadataFacet mdf = project.getFacet(MetadataFacet.class);
                mdf.setProjectName(archive.getName());
                
+//               SwitchYardFacet installed = facetFactory.install(project, SwitchYardFacet.class);
                
-               SwitchYardFacet switchYardFacet = new SwitchYardFacet();
+            
+
+               
                Facet facet = facetFactory.install(project, SwitchYardFacet.class);
+               LOG.info("***** Proxy.unwrapClass" + Proxies.unwrap(facet).getClass());
+               LOG.info("***** Proxy.unwrap" + Proxies.unwrap(facet));
+
                Faceted faceted = facet.getFaceted();
               
                if(facet.install()){
